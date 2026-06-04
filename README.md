@@ -2,20 +2,49 @@
 
 Telegram-бот для поиска научных статей с оформлением по ГОСТ 7.0.5-2008.
 
+Агент по запросу пользователя ищет релевантные статьи через OpenAlex API, оценивает их через LLM, строит синтез источников и возвращает отчёт прямо в Telegram. Работает только с open-access материалами.
+
+## Стек
+
+| Компонент | Технология |
+|---|---|
+| Интерфейс | Telegram Bot |
+| Оркестрация | n8n Cloud |
+| HTTP-сервер | Python + Flask |
+| Туннель | ngrok |
+| Поиск статей | OpenAlex API (250M+ работ, без ключа) |
+| LLM-анализ | Groq API — Llama 3.3 70B |
+| Язык | Python 3.9+ |
+
+## Структура проекта
+
+```
+research-agent/
+├── agent.py              # Весь pipeline + Flask-сервер
+├── requirements.txt      # Зависимости
+├── .env.example          # Шаблон переменных окружения
+├── examples/
+│   ├── input.txt         # Пример текстового запроса
+│   ├── input_links.csv   # Пример CSV со ссылками
+│   └── output.md         # Пример готового отчёта
+└── README.md
+```
+
 ## Быстрый старт
 
 ```bash
 # 1. Установить зависимости
 pip3 install -r requirements.txt
 
-# 2. Создать .env и вставить ключ
-echo "DEEPSEEK_API_KEY=your_github_token" > .env
+# 2. Создать .env
+cp .env.example .env
+# Вставить GROQ API ключ: console.groq.com
 
-# 3. Проверить DeepSeek
+# 3. Проверить API
 python3 agent.py --test
 
-# 4. Запустить pipeline (CLI)
-python3 agent.py --query "federated learning" --goal "найти методы после 2020"
+# 4. Запустить CLI
+python3 agent.py --query "federated learning privacy" --goal "найти методы защиты данных"
 
 # 5. Запустить сервер для n8n
 python3 agent.py --serve
@@ -24,8 +53,8 @@ python3 agent.py --serve
 ## Пример входных данных
 
 ```
-Query:  "federated learning privacy"
-Goal:   "найти методы защиты данных после 2020"
+Query: "federated learning privacy"
+Goal:  "найти методы защиты данных в федеративном обучении"
 ```
 
 Или файл `examples/input.txt`, CSV `examples/input_links.csv`.
@@ -34,39 +63,51 @@ Goal:   "найти методы защиты данных после 2020"
 
 См. `examples/output.md` — Markdown-отчёт с ГОСТ-списком, скорингом и синтезом.
 
-## Описание
-
-Агент решает проблему ручного поиска и оформления научных источников: исследователь тратит часы на просмотр баз данных, проверку PDF и форматирование по ГОСТ — агент делает это за секунды через Telegram-бот.
-
-Pipeline состоит из пяти шагов: парсинг входа (запрос / файл / CSV / Markdown), нормализация (дедупликация по хэшу, обрезка длинных текстов), поиск через arXiv API, анализ через DeepSeek и сборка Markdown-отчёта с trace-логом.
-
-LLM используется содержательно в трёх местах: оценка релевантности каждой статьи по шкале 0–10 с обоснованием, синтез противоречий и пробелов между источниками, форматирование ГОСТ-записей из разнородных метаданных. Всё остальное — детерминированный код: дедупликация, retry, fallback, фильтрация, сборка отчёта.
-
-Основные ограничения: агент работает только с open-access статьями; arXiv покрывает преимущественно точные науки и CS; GitHub Models имеет rate limit ~10 req/min на бесплатном тарифе; ГОСТ-запись зависит от полноты метаданных arXiv.
-
-Сложнее всего оказалось совместить rate limit arXiv и GitHub Models — оба давали 429 при частых запросах, что потребовало перехода на батч-вызовы LLM (один запрос на все статьи вместо N запросов).
-
-Следующий шаг — заменить arXiv на OpenAlex API (250M+ статей, без rate limit, чистый JSON) и добавить RAG-слой для работы с загруженными пользователем PDF.
-
-## Стек
-
-- Python 3.9+ · Flask · python-dotenv · requests
-- arXiv API (поиск статей, open access)
-- DeepSeek V3 via GitHub Models (анализ, ГОСТ, синтез)
-- n8n Cloud (Telegram триггер + HTTP транспорт)
-- ngrok (публичный URL для локального сервера)
-
-## n8n Workflow (4 ноды)
+## Pipeline
 
 ```
-Telegram Trigger
-    → HTTP Request POST /run (ngrok URL)
-    → IF ok == true
-        → Telegram Send report
-        → Telegram Send error
+Пользователь → Telegram
+    ↓
+n8n Trigger → HTTP POST /run → Flask (agent.py)
+    ↓
+Шаг 1: Парсинг входа       — формат: query / txt / csv / md / json
+Шаг 2: Нормализация        — дедупликация по MD5, обрезка до 200 символов
+Шаг 3: Поиск статей        — OpenAlex API, лимит 3 статьи
+Шаг 4: LLM-анализ (Groq)   — скоринг 0-10, синтез, ГОСТ батчем
+Шаг 5: Верификация         — фильтр score < 2, fallback ГОСТ без LLM
+Шаг 6: Сборка отчёта       — Telegram HTML + output.md с trace-логом
+    ↓
+n8n → Telegram Send Message
 ```
 
-HTTP Request body:
+## Где LLM, где код
+
+| Шаг | Тип |
+|---|---|
+| Парсинг, дедупликация, обрезка | Детерминированный код |
+| Поиск статей | OpenAlex API |
+| Скоринг релевантности с обоснованием | LLM (Groq) |
+| Синтез противоречий и пробелов | LLM (Groq) |
+| ГОСТ-форматирование из метаданных | LLM (Groq) |
+| Фильтрация, retry, fallback, отчёт | Детерминированный код |
+
+## Обработка ошибок
+
+| Ситуация | Реакция |
+|---|---|
+| Пустой запрос | Сообщение пользователю |
+| Неизвестный формат файла | Сообщение с поддерживаемыми форматами |
+| Дубликаты | Удаляются, отмечаются в trace |
+| Запрос > 200 символов | Обрезается с предупреждением |
+| Статьи не найдены | Предложение изменить запрос |
+| Все статьи нерелевантны (score < 2) | Предложение уточнить цель |
+| Ошибка LLM / 429 | Retry ×4 с backoff, затем ГОСТ-fallback |
+
+## n8n Workflow
+
+4 ноды: Telegram Trigger → HTTP Request → IF → Telegram Send Message
+
+HTTP Request:
 ```json
 {
   "query": "={{ $json.message.text }}",
@@ -74,16 +115,23 @@ HTTP Request body:
 }
 ```
 
-## Структура проекта
+Telegram Send Message:
+- Parse Mode: HTML
+- Text: `{{ $json.report ? $json.report.substring(0, 4000) : $json.error }}`
 
-```
-research-agent/
-├── agent.py              # Весь pipeline + Flask сервер
-├── requirements.txt
-├── .env.example
-├── examples/
-│   ├── input.txt         # Пример запроса
-│   ├── input_links.csv   # Пример CSV
-│   └── output.md         # Пример отчёта
-└── README.md
-```
+## Ограничения
+
+- Только open-access статьи — закрытые PDF не скачиваются
+- OpenAlex лучше работает с английскими запросами
+- Groq бесплатный тариф — 30 req/min
+- ngrok меняет URL при перезапуске (бесплатный тариф)
+- 3 статьи за запрос — ограничение rate limit LLM
+- Сессионная память не реализована (следующий шаг)
+
+## Следующие шаги
+
+- Постоянный деплой на Railway (убрать зависимость от ngrok)
+- OpenAlex → добавить CrossRef для полных метаданных ГОСТ
+- RAG по загруженным пользователем PDF
+- Долгосрочная память через Supabase
+- Перевод русских запросов на английский перед поиском

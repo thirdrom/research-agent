@@ -1,33 +1,27 @@
-# Отчёт агента: federated learning privacy
-**Цель:** найти методы защиты данных после 2020
-**Дата:** 2026-06-03 16:10
+# Отчёт: federated learning privacy
+**Цель:** найти методы защиты данных в федеративном обучении
+**Дата:** 2026-06-03 20:36
 
 ---
-## Найдено статей: 4
+## Найдено статей: 3
 
-### [1] Advances and Open Problems in Federated Learning
-**ГОСТ:** Kairouz P. [и др.] Advances and Open Problems in Federated Learning // arXiv. — 2021. — arXiv:1912.04977
-**Релевантность:** 9/10 — детально рассматривает приватность как центральную проблему федеративного обучения
-**Цитирования:** данных о цитированиях нет
-**PDF:** [Открыть PDF](https://arxiv.org/pdf/1912.04977)
+### [1] Federated Learning With Differential Privacy: Algorithms and Performance Analysis
+**ГОСТ:** Wei K. [и др.] Federated Learning With Differential Privacy // IEEE Transactions on Information Forensics and Security. — 2020. — DOI: 10.1109/tifs.2020.2988575
+**Релевантность:** 9/10 — центральная тема статьи — дифференциальная приватность в федеративном обучении
+**Цитирования:** 2190
+**PDF:** [PDF](http://hdl.handle.net/11343/251362)
 
-### [2] Federated Learning: Challenges, Methods, and Future Directions
-**ГОСТ:** Li T. [и др.] Federated Learning: Challenges, Methods, and Future Directions // arXiv. — 2020. — arXiv:1908.07873
-**Релевантность:** 8/10 — охватывает методы приватности, хотя основной фокус на коммуникационных издержках
-**Цитирования:** данных о цитированиях нет
-**PDF:** [Открыть PDF](https://arxiv.org/pdf/1908.07873)
+### [2] A survey on security and privacy of federated learning
+**ГОСТ:** Mothukuri V. [и др.] A survey on security and privacy of federated learning // Future Generation Computer Systems. — 2020. — DOI: 10.1016/j.future.2020.10.007
+**Релевантность:** 8/10 — обзор методов безопасности и приватности в федеративном обучении
+**Цитирования:** 1295
+**PDF:** нет open-access PDF
 
-### [3] Differentially Private Federated Learning
-**ГОСТ:** Geyer R.C. [и др.] Differentially Private Federated Learning // arXiv. — 2021. — arXiv:1911.00222
-**Релевантность:** 9/10 — центральная тема — дифференциальная приватность в федеративных системах
-**Цитирования:** данных о цитированиях нет
-**PDF:** [Открыть PDF](https://arxiv.org/pdf/1911.00222)
-
-### [4] Communication-Efficient Learning of Deep Networks
-**ГОСТ:** McMahan H.B. [и др.] Communication-Efficient Learning of Deep Networks // arXiv. — 2017. — arXiv:1602.05629
-**Релевантность:** 6/10 — базовая работа по FedAvg, приватность затрагивается косвенно
-**Цитирования:** данных о цитированиях нет
-**PDF:** [Открыть PDF](https://arxiv.org/pdf/1602.05629)
+### [3] Secure, privacy-preserving and federated machine learning in medical imaging
+**ГОСТ:** Kaissis G. [и др.] Secure, privacy-preserving and federated machine learning // Nature Machine Intelligence. — 2020. — DOI: 10.1038/s42256-020-0186-1
+**Релевантность:** 7/10 — затрагивает защиту данных пациентов в контексте федеративного обучения
+**Цитирования:** 1309
+**PDF:** [PDF](https://www.nature.com/articles/s42256-020-0186-1.pdf)
 
 ---
 ## Синтез
@@ -41,9 +35,8 @@
 |-----|--------|--------|
 | input_parse | ok | format=query, length=26 |
 | normalize | ok | items_in=1, duplicates_removed=0, items_out=1 |
-| search | ok | source=arXiv, found=5 |
-| llm_score | ok | scored=5 |
-| verify | ok | passed=4, filtered=1 |
-| verify_detail | info | article=5, reason=score=2: не связана с темой приватности |
-| llm_synth | ok | length=298 |
-| llm_gost | ok | count=4 |
+| search | ok | source=OpenAlex, found=3 |
+| llm_score | ok | scored=3 |
+| verify | ok | passed=3, filtered=0 |
+| llm_synth | ok | length=951 |
+| llm_gost | ok | count=3 |
