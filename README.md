@@ -1,4 +1,4 @@
-# Research Agent
+# SciSearcher - Research Agent
 
 Telegram-бот для поиска научных статей с оформлением по ГОСТ 7.0.5-2008.
 
